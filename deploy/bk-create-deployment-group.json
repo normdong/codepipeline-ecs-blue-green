@@ -1,0 +1,52 @@
+{
+    "applicationName": "APPNAME",
+    "deploymentGroupName": "demo",
+    "deploymentConfigName": "CodeDeployDefault.ECSAllAtOnce",
+    "serviceRoleArn": "CDSRARN",
+    "autoRollbackConfiguration": {
+        "enabled": true,
+        "events": [
+            "DEPLOYMENT_FAILURE",
+            "DEPLOYMENT_STOP_ON_REQUEST"
+        ]
+    },
+    "deploymentStyle": {
+        "deploymentType": "BLUE_GREEN",
+        "deploymentOption": "WITH_TRAFFIC_CONTROL"
+    },
+    "blueGreenDeploymentConfiguration": {
+        "terminateBlueInstancesOnDeploymentSuccess": {
+            "action": "TERMINATE",
+            "terminationWaitTimeInMinutes": 0
+        },
+        "deploymentReadyOption": {
+            "actionOnTimeout": "CONTINUE_DEPLOYMENT",
+            "waitTimeInMinutes": 0
+        }
+    },
+    "loadBalancerInfo": {
+        "targetGroupPairInfoList": [
+            {
+                "targetGroups": [
+                    {
+                        "name": "TGNAME1"
+                    },
+                    {
+                        "name": "TGNAME2"
+                    }
+                ],
+                "prodTrafficRoute": {
+                    "listenerArns": [
+                        "LISTENERARN"
+                    ]
+                }
+            }
+        ]
+    },
+    "ecsServices": [
+        {
+            "serviceName": "demo",
+            "clusterName": "ECSCLUSTERNAME"
+        }
+    ]
+}

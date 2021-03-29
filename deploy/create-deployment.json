@@ -1,0 +1,12 @@
+{
+    "applicationName": "APPNAME",
+    "deploymentGroupName": "demo",
+    "revision": {
+        "revisionType": "AppSpecContent",
+        "appSpecContent": {
+            "content": "{\"version\":1,\"Resources\":[{\"TargetService\":{\"Type\":\"AWS::ECS::Service\",\"Properties\":{\"TaskDefinition\":\"TDARN\",\"LoadBalancerInfo\":{\"ContainerName\":\"demo\",\"ContainerPort\":8080}}}}]}"
+        }
+    },
+    "deploymentConfigName": "CodeDeployDefault.ECSAllAtOnce",
+    "ignoreApplicationStopFailures": false
+}

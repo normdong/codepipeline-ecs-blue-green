@@ -1,0 +1,52 @@
+{
+    "applicationName": "bluegreen-stack-codeDeployApplication-8357YG8UI8IM",
+    "deploymentGroupName": "demo",
+    "deploymentConfigName": "CodeDeployDefault.ECSAllAtOnce",
+    "serviceRoleArn": "arn:aws:iam::324072881487:role/bluegreen-stack-codeDeployServiceRole-1BATS2TV6K3N4",
+    "autoRollbackConfiguration": {
+        "enabled": true,
+        "events": [
+            "DEPLOYMENT_FAILURE",
+            "DEPLOYMENT_STOP_ON_REQUEST"
+        ]
+    },
+    "deploymentStyle": {
+        "deploymentType": "BLUE_GREEN",
+        "deploymentOption": "WITH_TRAFFIC_CONTROL"
+    },
+    "blueGreenDeploymentConfiguration": {
+        "terminateBlueInstancesOnDeploymentSuccess": {
+            "action": "TERMINATE",
+            "terminationWaitTimeInMinutes": 0
+        },
+        "deploymentReadyOption": {
+            "actionOnTimeout": "CONTINUE_DEPLOYMENT",
+            "waitTimeInMinutes": 0
+        }
+    },
+    "loadBalancerInfo": {
+        "targetGroupPairInfoList": [
+            {
+                "targetGroups": [
+                    {
+                        "name": "arn:aws:elasticloadbalancing:ap-southeast-2:324072881487:targetgroup/bluegre-tg1-12G7NG0RYBZ8N/6282e747e7030378"
+                    },
+                    {
+                        "name": "arn:aws:elasticloadbalancing:ap-southeast-2:324072881487:targetgroup/bluegre-tg2-EPKOEPOZ6X9K/184e95ae8674c47a"
+                    }
+                ],
+                "prodTrafficRoute": {
+                    "listenerArns": [
+                        "arn:aws:elasticloadbalancing:ap-southeast-2:324072881487:listener/app/bluegre-alb-7OZM0KZDVLW9/137197a619b1e2d4/9d7f797d8540c408"
+                    ]
+                }
+            }
+        ]
+    },
+    "ecsServices": [
+        {
+            "serviceName": "demo",
+            "clusterName": "bluegreen-stack-ecsCluster-lIfsQOrXOfNN"
+        }
+    ]
+}
