@@ -17,6 +17,7 @@ public class HelloController {
             InetAddress addr = InetAddress.getLocalHost();
             response = 
                 "<html>" +
+                "Host information: <br>" +
                 "Hostname: " + addr.getHostName() + "<br>" +
                 "IP Address: " + addr.getHostAddress() +
                 "</html>";
