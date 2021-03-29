@@ -1,0 +1,162 @@
+Parameters:
+  networkStackName:
+    Description: Name of the network stack
+    Type: String
+    Default: network-stack
+
+Resources:
+  albSg:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Open Port 80 for the ALB
+      SecurityGroupIngress:
+        - CidrIp: 0.0.0.0/0
+          FromPort: 80
+          IpProtocol: tcp
+          ToPort: 80
+      VpcId:
+        Fn::ImportValue:
+          !Sub ${networkStackName}-VPC-ID
+
+  alb:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Subnets:
+        - Fn::ImportValue:
+            !Sub ${networkStackName}-PUBLIC-SUBNET-ID-1
+        - Fn::ImportValue:
+            !Sub ${networkStackName}-PUBLIC-SUBNET-ID-2
+        - Fn::ImportValue:
+            !Sub ${networkStackName}-PUBLIC-SUBNET-ID-3
+      SecurityGroups:
+        - !Ref albSg
+      Type: application
+
+  httpListener:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+        - ForwardConfig:
+            TargetGroups:
+            - TargetGroupArn: !Ref tg1
+              Weight: 1
+            - TargetGroupArn: !Ref tg2
+              Weight: 0
+          Type: forward
+      LoadBalancerArn: !Ref alb
+      Port: 80
+      Protocol: HTTP
+
+  tg1:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      HealthCheckIntervalSeconds: 10
+      HealthCheckPath: /actuator/health
+      HealthCheckProtocol: HTTP
+      HealthCheckTimeoutSeconds: 5
+      HealthyThresholdCount: 3
+      Port: 8080
+      Protocol: HTTP
+      ProtocolVersion: HTTP1
+      TargetType: ip
+      UnhealthyThresholdCount: 5
+      VpcId:
+        Fn::ImportValue:
+          !Sub ${networkStackName}-VPC-ID
+
+  tg2:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      HealthCheckIntervalSeconds: 10
+      HealthCheckPath: /actuator/health
+      HealthCheckProtocol: HTTP
+      HealthCheckTimeoutSeconds: 5
+      HealthyThresholdCount: 3
+      Port: 8080
+      Protocol: HTTP
+      ProtocolVersion: HTTP1
+      TargetType: ip
+      UnhealthyThresholdCount: 5
+      VpcId:
+        Fn::ImportValue:
+          !Sub ${networkStackName}-VPC-ID
+
+  codeDeployApplication:
+    Type: AWS::CodeDeploy::Application
+    Properties:
+      ComputePlatform: ECS
+
+  codeDeployServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - codedeploy.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Path: /
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AWSCodeDeployRoleForECS
+
+  ecsTaskRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ecs-tasks.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Path: /
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonECS_FullAccess
+
+  taskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      ContainerDefinitions:
+        - Cpu: 256
+          Essential: true
+          Image: beedog/codepipeline-ecs-blue-green:0.0.1-SNAPSHOT
+          Name: demo
+          PortMappings:
+            - ContainerPort: 8080
+              HostPort: 8080
+              Protocol: tcp
+          Privileged: false
+      Cpu: 256
+      ExecutionRoleArn: !Sub arn:aws:iam::${AWS::AccountId}:role/ecsTaskExecutionRole
+      Memory: 512
+      NetworkMode: awsvpc
+      TaskRoleArn: !GetAtt ecsTaskRole.Arn
+
+  ecsCluster:
+    Type: AWS::ECS::Cluster
+
+Outputs:
+  albdns:
+    Description: ALB DNSName
+    Value: !GetAtt alb.DNSName
+
+  codeDeployServiceRole:
+    Description: CodeDeploy Service Role ARN
+    Value: !GetAtt codeDeployServiceRole.Arn
+
+  ecsCluster:
+    Description: ECS Cluster ARN
+    Value: !GetAtt ecsCluster.Arn
+
+  tgName1:
+    Description: Name of TG1
+    Value: !GetAtt tg1.TargetGroupName
+
+  tgName2:
+    Description: Name of TG2
+    Value: !GetAtt tg2.TargetGroupName

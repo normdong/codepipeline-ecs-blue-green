@@ -1,0 +1,225 @@
+Parameters:
+  vpcCidr:
+    Description: CIDR of the VPC
+    Type: String
+    Default: 10.128.0.0/16
+
+  publicSubnetCidr1:
+    Description: CIDR of publicSubnet1
+    Type: String
+    Default: 10.128.0.0/24
+
+  publicSubnetCidr2:
+    Description: CIDR of publicSubnet2
+    Type: String
+    Default: 10.128.1.0/24
+
+  publicSubnetCidr3:
+    Description: CIDR of publicSubnet3
+    Type: String
+    Default: 10.128.2.0/24
+
+  privateSubnetCidr1:
+    Description: CIDR of privateSubnet1
+    Type: String
+    Default: 10.128.128.0/24
+
+  privateSubnetCidr2:
+    Description: CIDR of privateSubnet2
+    Type: String
+    Default: 10.128.129.0/24
+
+  privateSubnetCidr3:
+    Description: CIDR of privateSubnet3
+    Type: String
+    Default: 10.128.130.0/24
+
+Resources:
+# VPC
+  vpc:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref vpcCidr
+      EnableDnsHostnames: true
+      EnableDnsSupport: true
+
+# Public subnet infrastructure
+  publicSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: !Select [0, Fn::GetAZs: ""]
+      VpcId: !Ref vpc
+      CidrBlock: !Ref publicSubnetCidr1
+      MapPublicIpOnLaunch: true
+
+  publicSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: !Select [1, Fn::GetAZs: ""]
+      VpcId: !Ref vpc
+      CidrBlock: !Ref publicSubnetCidr2
+      MapPublicIpOnLaunch: true
+
+  publicSubnet3:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: !Select [2, Fn::GetAZs: ""]
+      VpcId: !Ref vpc
+      CidrBlock: !Ref publicSubnetCidr3
+      MapPublicIpOnLaunch: true
+
+  igw:
+    Type: AWS::EC2::InternetGateway
+
+  attachIgw:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      InternetGatewayId: !Ref igw
+      VpcId: !Ref vpc
+
+  publicSubnetRtb:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref vpc
+
+  publicSubnetRtbIgwRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref publicSubnetRtb
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref igw
+
+  publicSubnetRtbIgwRouteAssociation1:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref publicSubnetRtb
+      SubnetId: !Ref publicSubnet1
+
+  publicSubnetRtbIgwRouteAssociation2:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref publicSubnetRtb
+      SubnetId: !Ref publicSubnet2
+
+  publicSubnetRtbIgwRouteAssociation3:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref publicSubnetRtb
+      SubnetId: !Ref publicSubnet3
+
+  publicSubnetSg:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Open Port 22 for SSH
+      SecurityGroupIngress:
+        - CidrIp: 0.0.0.0/0
+          FromPort: 22
+          IpProtocol: tcp
+          ToPort: 22
+      VpcId: !Ref vpc
+
+# Private subnet infrastructure
+  privateSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: !Select [0, Fn::GetAZs: ""]
+      VpcId: !Ref vpc
+      CidrBlock: !Ref privateSubnetCidr1
+      MapPublicIpOnLaunch: false
+
+  privateSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: !Select [1, Fn::GetAZs: ""]
+      VpcId: !Ref vpc
+      CidrBlock: !Ref privateSubnetCidr2
+      MapPublicIpOnLaunch: false
+
+  privateSubnet3:
+    Type: AWS::EC2::Subnet
+    Properties:
+      AvailabilityZone: !Select [2, Fn::GetAZs: ""]
+      VpcId: !Ref vpc
+      CidrBlock: !Ref privateSubnetCidr3
+      MapPublicIpOnLaunch: false
+
+  natEip:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+
+  ngw:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt natEip.AllocationId
+      SubnetId: !Ref publicSubnet1
+
+  privateSubnetRtb:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref vpc
+
+  privateSubnetRtbNgwRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref privateSubnetRtb
+      DestinationCidrBlock: 0.0.0.0/0
+      NatGatewayId: !Ref ngw
+
+  privateSubnetRtbIgwRouteAssociation1:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref privateSubnetRtb
+      SubnetId: !Ref privateSubnet1
+
+  privateSubnetRtbIgwRouteAssociation2:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref privateSubnetRtb
+      SubnetId: !Ref privateSubnet2
+
+  privateSubnetRtbIgwRouteAssociation3:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId: !Ref privateSubnetRtb
+      SubnetId: !Ref privateSubnet3
+
+  privateSubnetSg:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Open Port 8080 and 22 to the VPC
+      SecurityGroupIngress:
+        - CidrIp: !Ref vpcCidr
+          FromPort: 8080
+          IpProtocol: tcp
+          ToPort: 8080
+        - CidrIp: !Ref vpcCidr
+          FromPort: 22
+          IpProtocol: tcp
+          ToPort: 22
+      VpcId: !Ref vpc
+
+Outputs:
+  vpc:
+    Description: VPC ID
+    Value: !Ref vpc
+    Export:
+      Name: !Sub ${AWS::StackName}-VPC-ID
+
+  publicSubnet1:
+    Description: Public Subnet ID 1
+    Value: !Ref publicSubnet1
+    Export:
+      Name: !Sub ${AWS::StackName}-PUBLIC-SUBNET-ID-1
+
+  publicSubnet2:
+    Description: Public Subnet ID 2
+    Value: !Ref publicSubnet2
+    Export:
+      Name: !Sub ${AWS::StackName}-PUBLIC-SUBNET-ID-2
+
+  publicSubnet3:
+    Description: Public Subnet ID 3
+    Value: !Ref publicSubnet3
+    Export:
+      Name: !Sub ${AWS::StackName}-PUBLIC-SUBNET-ID-3
