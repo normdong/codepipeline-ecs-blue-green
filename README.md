@@ -79,6 +79,20 @@ sed -i "s|TDARN|${TDARN}|g" create-deployment.json
 aws deploy create-deployment --cli-input-json file://create-deployment.json
 ```
 
+# Clean up
+Delete the ECS service
+```
+ECSCLUSTERNAME=$(aws cloudformation describe-stack-resources --stack-name bluegreen-stack --logical-resource-id ecsCluster --query "StackResources[0]".PhysicalResourceId --output text)
+aws ecs update-service --cluster $ECSCLUSTERNAME --service demo --desired-count 0
+aws ecs delete-service --cluster $ECSCLUSTERNAME --service demo --force
+```
+
+Delete the CloudFormation stacks
+```
+aws cloudformation delete-stack --stack-name bluegreen-stack
+aws cloudformation delete-stack --stack-name network-stack
+```
+
 # Potential Improvements & Extensions
 For demonstration purpose this project is built light with many cut corners. It is not suitable for production use without improvements and extensions.
 - There are a lot of hard coded values. More paramiterization should be applied.
